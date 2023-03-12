@@ -26,23 +26,36 @@ function App() {
     rollH: 0,
   });
 
+  const isReady = rollDimensions.itemH > 0;
+
   useEffect(() => {
+    if (!rollRef.current?.childElementCount || isReady) {
+      return;
+    }
+
+    let timeoutId = 0;
     const getSizes = () => {
       const h = rollRef.current!.getBoundingClientRect().height;
       const itemH = rollRef.current!.children[0].getBoundingClientRect().height;
       const gap = (h - itemH * N) / (N - 1);
       setRollDimensions({ itemH, gap, rollH: h });
+      spinSlotRolls({ itemH, gap, rollH: h }, false);
+      clearTimeout(timeoutId);
     };
-    setTimeout(getSizes, 100);
-  }, []);
+    timeoutId = setTimeout(getSizes, 100);
 
-  const initPositionRolls = (args: typeof rollDimensions) => {
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [rollRef.current?.childElementCount]);
+
+  const spinSlotRolls = (args: typeof rollDimensions, shouldRoll = true) => {
     const { gap, itemH, rollH } = args;
 
     const rolls = [roll1Ref, roll2Ref, roll3Ref];
-    const offsets = rolls.map((r) => {
+    const offsets = rolls.map((r, idx) => {
       const prevOffset = Number(r.current!.dataset?.offset ?? 0);
-      const rand = ~~(Math.random() * 10);
+      const rand = shouldRoll ? ~~(Math.random() * 10) : idx + 1;
       let offset = rand * (itemH + gap);
       if (!prevOffset) {
         offset -= gap / 2;
@@ -87,7 +100,10 @@ function App() {
   return (
     <div className="bg-bg h-full text-textMain">
       <div className="flex flex-col justify-center items-center h-full">
-        <div className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 overflow-hidden">
+        <div
+          style={{ opacity: isReady ? 1 : 0 }}
+          className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 overflow-hidden transition-all"
+        >
           <div ref={roll1Ref}>
             <SlotRoll ref={rollRef} n={N} />
           </div>
@@ -101,10 +117,12 @@ function App() {
           </div>
         </div>
         <div className="h-10"></div>
-        <button onClick={() => initPositionRolls(rollDimensions)}>
+        <button
+          disabled={!isReady}
+          onClick={() => spinSlotRolls(rollDimensions)}
+        >
           ka-ching
         </button>
-        <pre>{JSON.stringify(rollDimensions)}</pre>
       </div>
     </div>
   );
