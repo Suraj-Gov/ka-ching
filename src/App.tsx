@@ -13,7 +13,7 @@ const SlotRoll = forwardRef<HTMLDivElement, { n: number }>(({ n }, ref) => {
 
 // considering 10 items in a SlotRoll
 
-const N = 10;
+const N = 300;
 function App() {
   const rollRef = useRef<HTMLDivElement>(null);
   const roll1Ref = useRef<HTMLDivElement>(null);
@@ -42,8 +42,11 @@ function App() {
     const rolls = [roll1Ref, roll2Ref, roll3Ref];
     const offsets = rolls.map((r) => {
       const prevOffset = Number(r.current!.dataset?.offset ?? 0);
-      const rand = ~~(Math.random() * (N - 3));
-      const offset = rand * (itemH + gap) - gap / 2;
+      const rand = ~~(Math.random() * 10);
+      let offset = rand * (itemH + gap);
+      if (!prevOffset) {
+        offset -= gap / 2;
+      }
       const newOffset = offset + prevOffset;
       console.log(rand, offset, newOffset);
       return {
@@ -52,21 +55,31 @@ function App() {
       };
     });
     // console.log(offsets);
-    const duration = 500 * Math.max(...offsets.map((i) => i.rand));
+    // const duration = 500 * Math.max(...offsets.map((i) => i.rand));
 
     rolls.forEach((r, idx) => {
       const offset = offsets[idx].newOffset;
-      r.current!.animate(
-        [
-          { transform: "translateY(0px)" },
-          { transform: `translateY(${-offset}px)` },
-        ],
-        {
-          fill: "forwards",
-          duration,
-          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-        }
-      );
+      const duration = 500 * offsets[idx].rand;
+
+      const keyframes = [
+        { transform: "translateY(0px)" },
+        { transform: `translateY(${-offset - 10}px)` },
+        { transform: `translateY(${-offset}px)` },
+      ];
+      const commonAnimationConfig: KeyframeAnimationOptions = {
+        easing: "ease",
+        fill: "forwards",
+      };
+
+      r.current!.animate(keyframes.slice(0, 2), {
+        ...commonAnimationConfig,
+        duration,
+      }).addEventListener("finish", () => {
+        r.current?.animate(keyframes.slice(1, 3), {
+          ...commonAnimationConfig,
+          duration: 100,
+        });
+      });
       r.current!.dataset.offset = String(offset);
     });
   };
@@ -91,6 +104,7 @@ function App() {
         <button onClick={() => initPositionRolls(rollDimensions)}>
           ka-ching
         </button>
+        <pre>{JSON.stringify(rollDimensions)}</pre>
       </div>
     </div>
   );
