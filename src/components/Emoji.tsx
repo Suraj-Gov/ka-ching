@@ -2,18 +2,9 @@ import React, { memo } from "react";
 import twemoji from "twemoji";
 
 interface props {
-  emoji?: string;
+  emoji: string;
   size?: string;
 }
-
-const getRandomEmoji = (): string => {
-  // prettier-ignore
-  const list = ['⚠️', '😎', '💡', '😂', '👍🏻', '🎉', '🦾', '📝', '🤧', '🥳', '😺']
-  const n = list.length;
-  const r = ~~(Math.random() * n);
-  const emoji = list.at(r)!;
-  return emoji;
-};
 
 const Emoji: React.FC<props> = ({ emoji, size = "2.5rem" }) => {
   return (
@@ -25,7 +16,7 @@ const Emoji: React.FC<props> = ({ emoji, size = "2.5rem" }) => {
         maxHeight: size,
       }}
       dangerouslySetInnerHTML={{
-        __html: twemoji.parse(emoji ?? getRandomEmoji(), {
+        __html: twemoji.parse(emoji, {
           folder: "svg",
           ext: ".svg",
         }),
