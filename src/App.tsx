@@ -1,4 +1,11 @@
-import React, { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  CSSProperties,
+  forwardRef,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Emoji from "./components/Emoji";
 import { getData, getRandomEmoji, setData, syncAnimate } from "./utils";
 
@@ -47,6 +54,8 @@ function App() {
 
   const isReady = rollDimensions.itemH > 0;
 
+  const [isAnimating, setIsAnimating] = useState(false);
+
   useEffect(() => {
     if (!rollRef.current?.childElementCount || isReady) {
       return;
@@ -54,6 +63,7 @@ function App() {
 
     let timeoutId = 0;
     const getSizes = () => {
+      setIsAnimating(true);
       const h = rollRef.current!.getBoundingClientRect().height;
       const itemH = rollRef.current!.children[0].getBoundingClientRect().height;
       const gap = (h - itemH * N) / (N - 1);
@@ -120,6 +130,9 @@ function App() {
       });
       setData(r.current!, "offset", offset);
       setData(r.current!, "lastStopIdx", rand);
+      if (idx === 2) {
+        setIsAnimating(false);
+      }
     };
 
     if (idx !== undefined) {
@@ -135,6 +148,7 @@ function App() {
     args: typeof rollDimensions,
     completeAfterIterations: number
   ) => {
+    setIsAnimating(true);
     const { rollH, gap, itemH } = args;
 
     rolls.forEach(async (r, idx) => {
@@ -176,29 +190,58 @@ function App() {
     });
   };
 
+  const effectsEaseFn = isAnimating
+    ? "cubic-bezier(0.22, 0.61, 0.36, 1)"
+    : "cubic-bezier(0.18, 0.89, 0.32, 1.28)";
+
+  const effectsDuration = `${ANIM_SPEED * (isAnimating ? 20 : 2)}ms`;
+
+  const containerTransitions: CSSProperties = {
+    transitionDuration: effectsDuration,
+    transitionTimingFunction: effectsEaseFn,
+  };
+
   return (
-    <div className="bg-bg h-full text-textMain">
+    <div
+      style={{
+        backgroundColor: isAnimating ? "#000000" : "#1b0a0a",
+        ...containerTransitions,
+      }}
+      className="h-full text-textMain"
+    >
       <div className="flex flex-col justify-center items-center h-full">
         <div
-          style={{ overflow: "hidden", opacity: isReady ? 1 : 0 }}
-          className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 transition-all rounded-md"
+          style={{
+            overflow: "hidden",
+            transform: `translateY(${isAnimating ? -1 : 0}rem)`,
+            ...containerTransitions,
+          }}
         >
-          <div ref={roll1Ref}>
-            <SlotRoll ref={rollRef} n={N} />
-          </div>
-          <div className="slit w-[2px] h-[14rem] absolute left-1/3 top-1/2 -translate-y-1/2"></div>
-          <div ref={roll2Ref}>
-            <SlotRoll n={N} />
-          </div>
-          <div className="slit w-[2px] h-[14rem] absolute right-1/3 top-1/2 -translate-y-1/2"></div>
-          <div ref={roll3Ref}>
-            <SlotRoll n={N} />
+          <div
+            style={{
+              opacity: isReady ? 1 : 0,
+              transition: "all 0.8s ease",
+            }}
+            className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 transition-all rounded-md"
+          >
+            <div ref={roll1Ref}>
+              <SlotRoll ref={rollRef} n={N} />
+            </div>
+            <div className="slit w-[2px] h-[14rem] absolute left-1/3 top-1/2 -translate-y-1/2"></div>
+            <div ref={roll2Ref}>
+              <SlotRoll n={N} />
+            </div>
+            <div className="slit w-[2px] h-[14rem] absolute right-1/3 top-1/2 -translate-y-1/2"></div>
+            <div ref={roll3Ref}>
+              <SlotRoll n={N} />
+            </div>
           </div>
         </div>
+
         <div className="h-10"></div>
         <button
-          className="z-10"
-          disabled={!isReady}
+          className="z-10 transition-all bg-white bg-opacity-0 hover:bg-opacity-20 active:bg-opacity-10 hover:-translate-y-1 active:translate-y-1 px-4 py-2 rounded-md disabled:opacity-30"
+          disabled={!isReady || isAnimating}
           onClick={() => keepRolling(rollDimensions, 1)}
         >
           ka-ching ✨
