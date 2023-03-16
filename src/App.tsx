@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import Emoji from "./components/Emoji";
-import { getData, getRandomEmoji, setData } from "./utils";
+import { getData, getRandomEmoji, setData, syncAnimate } from "./utils";
 
 const SlotRoll = forwardRef<HTMLDivElement, { n: number }>(({ n }, ref) => {
   const [icons] = useState(() => {
@@ -15,16 +15,14 @@ const SlotRoll = forwardRef<HTMLDivElement, { n: number }>(({ n }, ref) => {
       <div ref={ref} className="flex gap-8 flex-col items-center">
         {icons}
       </div>
-      <div className="flex gap-8 flex-col items-center bg-red-400 bg-opacity-20">
-        {icons}
-      </div>
+      <div className="flex gap-8 flex-col items-center">{icons}</div>
     </div>
   );
 });
 
 // considering 10 items in a SlotRoll
 
-const N = 10;
+const N = 20;
 
 const ANIM_SPEED = 300;
 
@@ -94,10 +92,9 @@ function App() {
     });
     // const duration = 500 * Math.max(...offsets.map((i) => i.rand));
 
-    const endRollAnimation = (idx: number) => {
+    const endRollAnimation = async (idx: number) => {
       const r = rolls[idx];
       const { newOffset, prevOffset, rand } = offsets[idx];
-      console.log("chosen random", rand);
       const offset = newOffset;
       const duration = ANIM_SPEED * 2 * rand;
 
@@ -112,16 +109,17 @@ function App() {
         fill: "forwards",
       };
 
-      r.current!.animate(keyframes.slice(0, 2), {
+      const anim = syncAnimate(r.current!);
+      await anim(keyframes.slice(0, 2), {
         ...commonAnimationConfig,
         duration,
-      }).addEventListener("finish", () => {
-        r.current?.animate(keyframes.slice(1, 3), {
-          ...commonAnimationConfig,
-          duration: ANIM_SPEED,
-        });
+      });
+      await anim(keyframes.slice(1, 3), {
+        ...commonAnimationConfig,
+        duration: ANIM_SPEED,
       });
       setData(r.current!, "offset", offset);
+      setData(r.current!, "lastStopIdx", rand);
     };
 
     if (idx !== undefined) {
@@ -139,25 +137,42 @@ function App() {
   ) => {
     const { rollH, gap, itemH } = args;
 
-    rolls.forEach((r, idx) => {
-      const initYPos = Number(getData(r.current!, "offset") ?? 0);
-      const fromPos = -initYPos;
+    rolls.forEach(async (r, idx) => {
+      const anim = syncAnimate(r.current!);
+
+      let initYPos = Number(getData(r.current!, "offset") ?? 0);
+      let fromPos = -initYPos;
+      let keyframeFrom = { transform: `translateY(${fromPos}px)` };
+
+      const duration = 0.6 * N * ANIM_SPEED + idx * ANIM_SPEED * 0.5;
+
+      const lastStopIdx = Number(getData(r.current!, "lastStopIdx") ?? 0);
+      const shouldReset = idx + 1 - lastStopIdx !== 0;
+      if (shouldReset) {
+        const tillRollEnd = (duration / N) * (N - lastStopIdx);
+        await anim(
+          [keyframeFrom, { transform: `translateY(${-rollH - gap}px)` }],
+          {
+            duration: tillRollEnd,
+            fill: "forwards",
+          }
+        );
+        r.current!.style.transform = `translateY(0px)`;
+        initYPos = 0;
+        setData(r.current!, "offset", 0);
+        keyframeFrom.transform = `translateY(0px)`;
+      }
+
       const toPos = -rollH - initYPos - gap;
-      console.log({ fromPos, toPos });
 
-      const keyframes = [
-        { transform: `translateY(${fromPos}px)` },
-        { transform: `translateY(${toPos}px)` },
-      ];
-
-      r.current!.animate(keyframes, {
+      const keyframes = [keyframeFrom, { transform: `translateY(${toPos}px)` }];
+      await anim(keyframes, {
         iterations: completeAfterIterations + idx,
-        duration: 0.6 * N * ANIM_SPEED + idx * 300,
         fill: "forwards",
-      }).addEventListener("finish", () => {
-        r.current!.style.transform = keyframes[0].transform;
-        spinSlotRolls(args, true, idx);
+        duration,
       });
+      r.current!.style.transform = keyframes[0].transform;
+      spinSlotRolls(args, true, idx);
     });
   };
 
@@ -166,7 +181,7 @@ function App() {
       <div className="flex flex-col justify-center items-center h-full">
         <div
           style={{ overflow: "hidden", opacity: isReady ? 1 : 0 }}
-          className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 transition-all"
+          className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 transition-all rounded-md"
         >
           <div ref={roll1Ref}>
             <SlotRoll ref={rollRef} n={N} />
@@ -186,7 +201,7 @@ function App() {
           disabled={!isReady}
           onClick={() => keepRolling(rollDimensions, 1)}
         >
-          ka-ching
+          ka-ching ✨
         </button>
       </div>
     </div>

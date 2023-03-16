@@ -14,7 +14,7 @@ export const getRandomEmoji = (): string => {
   return randomEmoji;
 };
 
-type keyType = "offset" | "firstItemIdx";
+type keyType = "offset" | "lastStopIdx";
 
 export const setData = (
   ref: HTMLDivElement,
@@ -29,3 +29,10 @@ export const setData = (
 export const getData = (ref: HTMLDivElement, key: keyType): unknown => {
   return ref.dataset[key];
 };
+
+export const syncAnimate =
+  (node: Element) =>
+  (keyframes: Keyframe[], options: KeyframeAnimationOptions) =>
+    new Promise((resolve) => {
+      node.animate(keyframes, options).addEventListener("finish", resolve);
+    });
