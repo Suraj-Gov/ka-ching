@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import Emoji from "./components/Emoji";
-import { getRandomEmoji } from "./utils";
+import { getData, getRandomEmoji, setData } from "./utils";
 
 const SlotRoll = forwardRef<HTMLDivElement, { n: number }>(({ n }, ref) => {
   const [icons] = useState(() => {
@@ -15,19 +15,31 @@ const SlotRoll = forwardRef<HTMLDivElement, { n: number }>(({ n }, ref) => {
       <div ref={ref} className="flex gap-8 flex-col items-center">
         {icons}
       </div>
-      <div className="flex gap-8 flex-col items-center">{icons}</div>
+      <div className="flex gap-8 flex-col items-center bg-red-400 bg-opacity-20">
+        {icons}
+      </div>
     </div>
   );
 });
 
 // considering 10 items in a SlotRoll
 
-const N = 6;
+const N = 10;
+
+const ANIM_SPEED = 300;
+
+const getRandomNum = () => {
+  const n = ~~(Math.random() * (N - 3));
+  return n;
+};
+
 function App() {
   const rollRef = useRef<HTMLDivElement>(null);
+
   const roll1Ref = useRef<HTMLDivElement>(null);
   const roll2Ref = useRef<HTMLDivElement>(null);
   const roll3Ref = useRef<HTMLDivElement>(null);
+  const rolls = [roll1Ref, roll2Ref, roll3Ref];
 
   const [rollDimensions, setRollDimensions] = useState({
     itemH: 0,
@@ -58,41 +70,45 @@ function App() {
     };
   }, [rollRef.current?.childElementCount]);
 
-  const spinSlotRolls = (args: typeof rollDimensions, shouldRoll = true) => {
+  const spinSlotRolls = (
+    args: typeof rollDimensions,
+    shouldRoll = true,
+    idx?: number
+  ) => {
     const { gap, itemH, rollH } = args;
 
-    const rolls = [roll1Ref, roll2Ref, roll3Ref];
     const offsets = rolls.map((r, idx) => {
-      const prevOffset = Number(r.current!.dataset?.offset ?? 0);
-      let rand = shouldRoll ? ~~(Math.random() * 10) : idx + 1;
+      const prevOffset = Number(getData(r.current!, "offset") ?? 0);
+      let rand = shouldRoll ? getRandomNum() : idx + 1;
       rand = Math.max(1, rand); // always move atleast once
       let offset = rand * (itemH + gap);
       if (!prevOffset) {
         offset -= gap / 2;
       }
       const newOffset = offset + prevOffset;
-      console.log(rand, offset, newOffset);
       return {
         rand,
         newOffset,
         prevOffset,
       };
     });
-    // console.log(offsets);
     // const duration = 500 * Math.max(...offsets.map((i) => i.rand));
 
-    rolls.forEach((r, idx) => {
+    const endRollAnimation = (idx: number) => {
+      const r = rolls[idx];
       const { newOffset, prevOffset, rand } = offsets[idx];
+      console.log("chosen random", rand);
       const offset = newOffset;
-      const duration = 500 * rand;
+      const duration = ANIM_SPEED * 2 * rand;
 
       const keyframes = [
         { transform: `translateY(${-prevOffset}px)` },
         { transform: `translateY(${-offset - 10}px)` },
         { transform: `translateY(${-offset}px)` },
       ];
+
       const commonAnimationConfig: KeyframeAnimationOptions = {
-        easing: "ease",
+        easing: "ease-out",
         fill: "forwards",
       };
 
@@ -102,11 +118,46 @@ function App() {
       }).addEventListener("finish", () => {
         r.current?.animate(keyframes.slice(1, 3), {
           ...commonAnimationConfig,
-          duration: 100,
+          duration: ANIM_SPEED,
         });
       });
-      r.current!.dataset.offset = String(offset);
-      r.current!.dataset.firstItemIdx = String(rand);
+      setData(r.current!, "offset", offset);
+    };
+
+    if (idx !== undefined) {
+      endRollAnimation(idx);
+    } else {
+      rolls.forEach((_, idx) => {
+        endRollAnimation(idx);
+      });
+    }
+  };
+
+  const keepRolling = (
+    args: typeof rollDimensions,
+    completeAfterIterations: number
+  ) => {
+    const { rollH, gap, itemH } = args;
+
+    rolls.forEach((r, idx) => {
+      const initYPos = Number(getData(r.current!, "offset") ?? 0);
+      const fromPos = -initYPos;
+      const toPos = -rollH - initYPos - gap;
+      console.log({ fromPos, toPos });
+
+      const keyframes = [
+        { transform: `translateY(${fromPos}px)` },
+        { transform: `translateY(${toPos}px)` },
+      ];
+
+      r.current!.animate(keyframes, {
+        iterations: completeAfterIterations + idx,
+        duration: 0.6 * N * ANIM_SPEED + idx * 300,
+        fill: "forwards",
+      }).addEventListener("finish", () => {
+        r.current!.style.transform = keyframes[0].transform;
+        spinSlotRolls(args, true, idx);
+      });
     });
   };
 
@@ -114,7 +165,7 @@ function App() {
     <div className="bg-bg h-full text-textMain">
       <div className="flex flex-col justify-center items-center h-full">
         <div
-          style={{ opacity: isReady ? 1 : 0 }}
+          style={{ overflow: "hidden", opacity: isReady ? 1 : 0 }}
           className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 transition-all"
         >
           <div ref={roll1Ref}>
@@ -133,7 +184,7 @@ function App() {
         <button
           className="z-10"
           disabled={!isReady}
-          onClick={() => spinSlotRolls(rollDimensions)}
+          onClick={() => keepRolling(rollDimensions, 1)}
         >
           ka-ching
         </button>
