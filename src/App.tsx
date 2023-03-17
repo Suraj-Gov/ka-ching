@@ -51,8 +51,28 @@ function App() {
     gap: 0,
     rollH: 0,
   });
+  const [isLoadingDone, setIsLoadingDone] = useState(false);
+  const isReady = rollDimensions.itemH > 0 && isLoadingDone;
 
-  const isReady = rollDimensions.itemH > 0;
+  useEffect(() => {
+    // set state on image load complete
+    const allImages = document.querySelectorAll("img");
+    const totalImages = allImages.length;
+    let loadedImagesCount = 0;
+    const registerOnLoad = () => {
+      loadedImagesCount++;
+      if (loadedImagesCount === totalImages) {
+        setIsLoadingDone(true);
+      }
+    };
+    allImages.forEach((i) => {
+      if (i.complete) {
+        registerOnLoad();
+      } else {
+        i.onload = registerOnLoad;
+      }
+    });
+  }, []);
 
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -106,7 +126,7 @@ function App() {
       const r = rolls[idx];
       const { newOffset, prevOffset, rand } = offsets[idx];
       const offset = newOffset;
-      const duration = ANIM_SPEED * 2 * rand;
+      const duration = ANIM_SPEED * 1.5 * rand;
 
       const keyframes = [
         { transform: `translateY(${-prevOffset}px)` },
@@ -238,18 +258,18 @@ function App() {
             </div>
           </div>
           <div
-            style={{ boxShadow: "inset 0px 20px 20px 7px black" }}
+            style={{ boxShadow: "inset 0px 20px 20px 6px black" }}
             className="absolute top-0 z-10 h-[14rem] w-[18rem]"
           ></div>
           <div
-            style={{ boxShadow: "inset 0px -20px 20px 7px black" }}
+            style={{ boxShadow: "inset 0px -20px 20px 6px black" }}
             className="absolute top-0 z-10 h-[14rem] w-[18rem]"
           ></div>
         </div>
 
         <div className="h-10"></div>
         <button
-          className="z-10 transition-all bg-white bg-opacity-0 hover:bg-opacity-20 active:bg-opacity-10 hover:-translate-y-1 active:translate-y-1 px-4 py-2 rounded-md disabled:opacity-30"
+          className="z-10 transition-all bg-white bg-opacity-0 hover:bg-opacity-10 active:bg-opacity-5 hover:-translate-y-1 active:translate-y-1 px-4 py-2 rounded-md disabled:opacity-30 border-red-200 border-opacity-10 border-2"
           disabled={!isReady || isAnimating}
           onClick={() => keepRolling(rollDimensions, 1)}
         >

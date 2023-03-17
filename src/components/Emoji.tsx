@@ -12,14 +12,18 @@ const Emoji: React.FC<props> = ({ emoji, size = "2.5rem" }) => {
       style={{
         display: "inline-block",
         width: size,
-        height: "auto",
-        maxHeight: size,
+        height: size,
       }}
       dangerouslySetInnerHTML={{
-        __html: twemoji.parse(emoji, {
-          folder: "svg",
-          ext: ".svg",
-        }),
+        __html: twemoji
+          .parse(emoji, {
+            folder: "svg",
+            ext: ".svg",
+          })
+          .replace(
+            "twemoji.maxcdn.com/v",
+            "cdnjs.cloudflare.com/ajax/libs/twemoji"
+          ),
       }}
     />
   );
