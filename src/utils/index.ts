@@ -26,6 +26,7 @@ export const setData = (
   }
   ref.dataset[key] = val;
 };
+
 export const getData = (ref: HTMLDivElement, key: keyType): unknown => {
   return ref.dataset[key];
 };
