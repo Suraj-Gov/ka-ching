@@ -8,28 +8,9 @@ import React, {
 } from "react";
 import Emoji from "./components/Emoji";
 import { getData, getRandomEmoji, setData, syncAnimate } from "./utils";
+import SlotRoll from "./components/SlotRoll";
 
-const SlotRoll = forwardRef<HTMLDivElement, { n: number }>(({ n }, ref) => {
-  const [icons] = useState(() => {
-    return [...Array(n)].map((_, idx) => {
-      const emoji = getRandomEmoji();
-      return <Emoji emoji={emoji} key={idx} />;
-    });
-  });
-
-  return (
-    <div className="flex flex-col gap-8">
-      <div ref={ref} className="flex gap-8 flex-col items-center">
-        {icons}
-      </div>
-      <div className="flex gap-8 flex-col items-center">{icons}</div>
-    </div>
-  );
-});
-
-// considering 10 items in a SlotRoll
-
-const N = 20;
+const N = 10;
 
 const ANIM_SPEED = 300;
 
@@ -51,9 +32,8 @@ function App() {
     gap: 0,
     rollH: 0,
   });
-  const [isLoadingDone, setIsLoadingDone] = useState(false);
-  const isReady = rollDimensions.itemH > 0 && isLoadingDone;
 
+  const [isLoadingDone, setIsLoadingDone] = useState(false);
   useEffect(() => {
     // set state on image load complete
     const allImages = document.querySelectorAll("img");
@@ -74,16 +54,18 @@ function App() {
     });
   }, []);
 
+  const isReady = rollDimensions.itemH > 0 && isLoadingDone;
+
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
-    if (!rollRef.current?.childElementCount || isReady) {
+    const hasNoChildren = !rollRef.current?.childElementCount;
+    if (hasNoChildren || isReady) {
       return;
     }
 
     let timeoutId = 0;
     const getSizes = () => {
-      setIsAnimating(true);
       const h = rollRef.current!.getBoundingClientRect().height;
       const itemH = rollRef.current!.children[0].getBoundingClientRect().height;
       const gap = (h - itemH * N) / (N - 1);
@@ -100,10 +82,11 @@ function App() {
 
   const spinSlotRolls = (
     args: typeof rollDimensions,
-    shouldRoll = true,
+    shouldRoll = true /** set false if only to align to next item in slot roll */,
     idx?: number
   ) => {
-    const { gap, itemH, rollH } = args;
+    setIsAnimating(true);
+    const { gap, itemH } = args;
 
     const offsets = rolls.map((r, idx) => {
       const prevOffset = Number(getData(r.current!, "offset") ?? 0);
@@ -111,6 +94,7 @@ function App() {
       rand = Math.max(1, rand); // always move atleast once
       let offset = rand * (itemH + gap);
       if (!prevOffset) {
+        // on init, do not stick at top
         offset -= gap / 2;
       }
       const newOffset = offset + prevOffset;
@@ -120,7 +104,6 @@ function App() {
         prevOffset,
       };
     });
-    // const duration = 500 * Math.max(...offsets.map((i) => i.rand));
 
     const endRollAnimation = async (idx: number) => {
       const r = rolls[idx];
@@ -133,6 +116,8 @@ function App() {
         { transform: `translateY(${-offset - 10}px)` },
         { transform: `translateY(${-offset}px)` },
       ];
+      const spinToRandItemPos = keyframes.slice(0, 2);
+      const jerkToLockItemPos = keyframes.slice(1, 3);
 
       const commonAnimationConfig: KeyframeAnimationOptions = {
         easing: "ease-out",
@@ -140,15 +125,16 @@ function App() {
       };
 
       const anim = syncAnimate(r.current!);
-      await anim(keyframes.slice(0, 2), {
+      await anim(spinToRandItemPos, {
         ...commonAnimationConfig,
         duration,
       });
-      if (idx === 2) {
+      const isAnimationComplete = idx === 2;
+      if (isAnimationComplete) {
         // end animation before the last tick
         setIsAnimating(false);
       }
-      await anim(keyframes.slice(1, 3), {
+      await anim(jerkToLockItemPos, {
         ...commonAnimationConfig,
         duration: ANIM_SPEED,
       });
@@ -258,11 +244,11 @@ function App() {
             </div>
           </div>
           <div
-            style={{ boxShadow: "inset 0px 20px 20px 6px black" }}
+            style={{ boxShadow: "inset 0px 20px 40px 6px black" }}
             className="absolute top-0 z-10 h-[14rem] w-[18rem]"
           ></div>
           <div
-            style={{ boxShadow: "inset 0px -20px 20px 6px black" }}
+            style={{ boxShadow: "inset 0px -20px 40px 6px black" }}
             className="absolute top-0 z-10 h-[14rem] w-[18rem]"
           ></div>
         </div>
