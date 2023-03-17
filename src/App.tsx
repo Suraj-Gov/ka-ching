@@ -124,15 +124,16 @@ function App() {
         ...commonAnimationConfig,
         duration,
       });
+      if (idx === 2) {
+        // end animation before the last tick
+        setIsAnimating(false);
+      }
       await anim(keyframes.slice(1, 3), {
         ...commonAnimationConfig,
         duration: ANIM_SPEED,
       });
       setData(r.current!, "offset", offset);
       setData(r.current!, "lastStopIdx", rand);
-      if (idx === 2) {
-        setIsAnimating(false);
-      }
     };
 
     if (idx !== undefined) {
@@ -204,13 +205,14 @@ function App() {
   return (
     <div
       style={{
-        backgroundColor: isAnimating ? "#000000" : "#1b0a0a",
+        backgroundColor: isAnimating ? "#120707" : "#1b0a0a",
         ...containerTransitions,
       }}
-      className="h-full text-textMain"
+      className="h-full text-textMain bg-[#1b0a0a]"
     >
       <div className="flex flex-col justify-center items-center h-full">
         <div
+          className="border-[#804545] border-2 rounded-md"
           style={{
             overflow: "hidden",
             transform: `translateY(${isAnimating ? -1 : 0}rem)`,
@@ -220,9 +222,8 @@ function App() {
           <div
             style={{
               opacity: isReady ? 1 : 0,
-              transition: "all 0.8s ease",
             }}
-            className="relative h-[14rem] w-[18rem] border-[#804545] border-2 grid grid-cols-3 transition-all rounded-md"
+            className="relative h-[14rem] w-[18rem]  grid grid-cols-3 transition-all duration-500"
           >
             <div ref={roll1Ref}>
               <SlotRoll ref={rollRef} n={N} />
@@ -236,6 +237,14 @@ function App() {
               <SlotRoll n={N} />
             </div>
           </div>
+          <div
+            style={{ boxShadow: "inset 0px 20px 20px 7px black" }}
+            className="absolute top-0 z-10 h-[14rem] w-[18rem]"
+          ></div>
+          <div
+            style={{ boxShadow: "inset 0px -20px 20px 7px black" }}
+            className="absolute top-0 z-10 h-[14rem] w-[18rem]"
+          ></div>
         </div>
 
         <div className="h-10"></div>
