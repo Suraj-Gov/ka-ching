@@ -12,7 +12,7 @@ import SlotRoll from "./components/SlotRoll";
 
 const N = 10;
 
-const ANIM_SPEED = 300;
+const ANIM_SPEED = 200;
 
 const getRandomNum = () => {
   const n = ~~(Math.random() * (N - 3));
